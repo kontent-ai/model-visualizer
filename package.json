@@ -19,7 +19,7 @@
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",
     "@kontent-ai/custom-app-sdk": "^1.0.0",
-    "@kontent-ai/management-sdk": "^7.7.0",
+    "@kontent-ai/management-sdk": "^8.3.1",
     "@kontent-ai/stylekit": "^1.0.0",
     "@netlify/functions": "^3.0.4",
     "@tailwindcss/vite": "^4.1.2",
