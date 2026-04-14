@@ -77,7 +77,7 @@ export const SnippetNode: React.FC<NodeProps<SnippetNodeData>> = ({
               .map((el, i) => (
                 <ElementRow
                   key={el.id}
-                  element={{ ...el, fromSnippet: false, name: el.name ?? "" }}
+                  element={{ ...el, origin: { kind: "direct" }, name: el.name ?? "" }}
                   isLast={i === filteredElements.length - 1}
                 />
               ))}

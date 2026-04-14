@@ -19,7 +19,11 @@ export type Element = ContentTypeElements.ContentTypeElementModel;
 
 export type SnippetElement = ContentTypeElements.ISnippetElement;
 
-export type AnnotatedElement = Element & { fromSnippet: { id: string; name: string } | false };
+export type ElementOrigin =
+  | { kind: "direct" }
+  | { kind: "snippet"; id: string; name: string };
+
+export type AnnotatedElement = Element & { origin: ElementOrigin };
 
 export type NamedElement = Exclude<
   ContentTypeElements.ContentTypeElementModel,
@@ -48,7 +52,6 @@ export type ElementTypeLabels = {
 
 export type Action = keyof Pick<ManagementClient, "listContentTypes" | "listContentTypeSnippets" | "listTaxonomies">;
 
-export type ApiResponse<T> = {
-  data?: T;
-  error?: AppError;
-};
+export type ApiResponse<T> =
+  | { isError: false; data: T }
+  | { isError: true; error: AppError };

@@ -64,7 +64,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     // Fallback for unknown errors.
     return createResponse(500, {
-      message: apiError.message || "Unknown API error",
+      message: apiError instanceof Error ? apiError.message : "Unknown API error",
       errorCode: 500,
       details: typeof apiError === "object" ? JSON.stringify(apiError) : apiError,
     });
