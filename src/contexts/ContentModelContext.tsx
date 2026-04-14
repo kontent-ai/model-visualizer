@@ -58,12 +58,12 @@ export const ContentModelProvider: React.FC<{ children: ReactNode }> = ({ childr
           makeMapiRequest<Taxonomy[]>(customApp.context.environmentId, "listTaxonomies"),
         ]);
 
-        const error = typesResult.error || snippetsResult.error || taxonomiesResult.error;
-        if (error) throw error;
+        const firstErrored = [typesResult, snippetsResult, taxonomiesResult].find((r) => r.isError);
+        if (firstErrored?.isError) throw firstErrored.error;
 
-        const types = typesResult.data ?? [];
-        const snippets = snippetsResult.data ?? [];
-        const taxonomies = taxonomiesResult.data ?? [];
+        const types = typesResult.isError ? [] : typesResult.data;
+        const snippets = snippetsResult.isError ? [] : snippetsResult.data;
+        const taxonomies = taxonomiesResult.isError ? [] : taxonomiesResult.data;
 
         setModel({
           contentTypes: types,

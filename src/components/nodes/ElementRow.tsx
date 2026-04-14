@@ -18,7 +18,7 @@ type NamedElement =
   >
   | ({
     name: string;
-    fromSnippet: false;
+    origin: { kind: "direct" };
   } & ContentTypeElements.ISnippetElement);
 
 type ElementRowProps = {
@@ -70,8 +70,8 @@ export const ElementRow: React.FC<ElementRowProps> = ({ element, isLast, selfRef
         icon="❋"
       />
     )}
-    {element.fromSnippet && (
-      <InfoBadge title={`This element comes from ${element.fromSnippet.name} snippet`} icon={<IconAccordion />} />
+    {element.origin.kind === "snippet" && (
+      <InfoBadge title={`This element comes from ${element.origin.name} snippet`} icon={<IconAccordion />} />
     )}
     {selfReferences && (
       <InfoBadge title={`This element can reference its own content type.`} icon={<IconRotateDoubleRight />} />

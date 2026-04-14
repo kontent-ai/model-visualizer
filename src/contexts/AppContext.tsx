@@ -1,85 +1,66 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getCustomAppContext, CustomAppContext } from "@kontent-ai/custom-app-sdk";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { getCustomAppContext } from "@kontent-ai/custom-app-sdk";
 import { Loader } from "../components/utils/Loader";
 import { ErrorDisplay } from "../components/utils/ErrorDisplay";
-import { CustomAppError, isCustomAppError } from "../utils/errors";
 
-type ValidCustomAppContext = Extract<CustomAppContext, { isError: false }>;
+type CustomAppResult = Awaited<ReturnType<typeof getCustomAppContext>>;
+type CustomAppSuccess = Extract<CustomAppResult, { isError: false }>;
 
-type AppContextType = {
-  customApp: ValidCustomAppContext;
+type AppContextValue = {
+  customApp: CustomAppSuccess;
 };
 
-type InternalState =
-  | { loading: true }
-  | { loading: false; context: ValidCustomAppContext; error: null }
-  | { loading: false; context: null; error: CustomAppError | { description: string; code: string } };
+type ProviderState =
+  | { status: "loading" }
+  | { status: "ready"; customApp: CustomAppSuccess }
+  | { status: "error"; description: string; code: string };
 
-const AppContext = createContext<AppContextType | null>(null);
+const AppContext = createContext<AppContextValue | null>(null);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<InternalState>({ loading: true });
+  const [state, setState] = useState<ProviderState>({ status: "loading" });
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const result = await getCustomAppContext();
-        if (result.isError) {
-          throw result;
-        } else {
-          setState({
-            loading: false,
-            context: result,
-            error: null,
-          });
-        }
-      } catch (error) {
+    getCustomAppContext()
+      .then((result) =>
+        setState(
+          result.isError
+            ? { status: "error", description: result.description, code: result.code }
+            : { status: "ready", customApp: result },
+        )
+      )
+      .catch((error) => {
         console.error("Error initializing app context:", error);
-        if (isCustomAppError(error)) {
-          setState({
-            loading: false,
-            context: null,
-            error: error,
-          });
-        } else {
-          setState({
-            loading: false,
-            context: null,
-            error: { description: `Failed to initialize app context: ${error}`, code: "UNKNOWN_ERROR" },
-          });
-        }
-      }
-    };
-
-    init();
+        setState({
+          status: "error",
+          description: `Failed to initialize app context: ${String(error)}`,
+          code: "UNKNOWN_ERROR",
+        });
+      });
   }, []);
 
-  if (state.loading) {
-    return (
-      <div className="centered">
-        <Loader
-          title="Just a moment..."
-          message="Initializing the application"
-        />
-      </div>
-    );
+  switch (state.status) {
+    case "loading":
+      return (
+        <div className="centered">
+          <Loader title="Just a moment..." message="Initializing the application" />
+        </div>
+      );
+    case "error":
+      return <ErrorDisplay description={state.description} code={state.code} />;
+    case "ready":
+      return (
+        <AppContext.Provider value={{ customApp: state.customApp }}>
+          {children}
+        </AppContext.Provider>
+      );
   }
-
-  if (state.error) {
-    return <ErrorDisplay description={state.error.description} code={state.error.code} />;
-  }
-
-  return (
-    <AppContext.Provider value={{ customApp: state.context! }}>
-      {children}
-    </AppContext.Provider>
-  );
 };
 
 export const useAppContext = () => {
-  const context = useContext(AppContext);
-  if (!context) {
+  const value = useContext(AppContext);
+  if (!value) {
     throw new Error("useAppContext must be used within an AppProvider");
   }
-  return context;
+  return value;
 };

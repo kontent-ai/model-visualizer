@@ -30,49 +30,29 @@ export const elementTypeMap: ReadonlyMap<ElementType, string> = new Map(
   Object.entries(elementTypeLabels) as [ElementType, string][],
 );
 
+const tryParseJson = (text: string): unknown | undefined => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+};
+
 export const makeMapiRequest = async <T>(
   environmentId: string,
   action: Action,
 ): Promise<ApiResponse<T>> => {
+  let response: Response;
   try {
-    const response = await fetch("/.netlify/functions/mapiProxy", {
+    response = await fetch("/.netlify/functions/mapiProxy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        environmentId,
-        action,
-      }),
+      body: JSON.stringify({ environmentId, action }),
     });
-
-    const responseText = await response.text();
-
-    try {
-      const responseData = JSON.parse(responseText);
-
-      if (!response.ok) {
-        return {
-          error: createAppError(
-            responseData.message || "Unknown API error",
-            responseData.errorCode || response.status,
-            responseData,
-          ),
-        };
-      }
-
-      return { data: responseData };
-    } catch (parseError) {
-      console.error("Failed to parse response:", responseText);
-      return {
-        error: createAppError(
-          "Invalid server response format",
-          "PARSE_ERROR",
-          { parseError, responseText },
-        ),
-      };
-    }
   } catch (error) {
     console.error("Network error:", error);
     return {
+      isError: true,
       error: createAppError(
         error instanceof Error ? error.message : "An unknown error occurred",
         "FETCH_ERROR",
@@ -80,6 +60,32 @@ export const makeMapiRequest = async <T>(
       ),
     };
   }
+
+  const responseText = await response.text();
+  const parsed = tryParseJson(responseText) as
+    | { message?: string; errorCode?: string | number }
+    | undefined;
+
+  if (parsed === undefined) {
+    console.error("Failed to parse response:", responseText);
+    return {
+      isError: true,
+      error: createAppError("Invalid server response format", "PARSE_ERROR", { responseText }),
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      isError: true,
+      error: createAppError(
+        parsed.message || "Unknown API error",
+        parsed.errorCode || response.status,
+        parsed,
+      ),
+    };
+  }
+
+  return { isError: false, data: parsed as T };
 };
 
 export const mergeTypesWithSnippets = (
@@ -95,14 +101,11 @@ export const mergeTypesWithSnippets = (
           ({
             ...s,
             content_group: element.content_group,
-            fromSnippet: {
-              id: snippet.id,
-              name: snippet.name,
-            },
+            origin: { kind: "snippet", id: snippet.id, name: snippet.name },
           }) as AnnotatedElement
         ) ?? [];
       }
 
-      return [{ ...element, fromSnippet: false }];
+      return [{ ...element, origin: { kind: "direct" } as const }];
     }),
   }));

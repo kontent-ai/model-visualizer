@@ -86,7 +86,7 @@ export const ContentTypeNode: React.FC<NodeProps<ContentTypeNodeData>> = ({
                   element={el.type === "snippet"
                     ? {
                       ...el,
-                      fromSnippet: false,
+                      origin: { kind: "direct" },
                       name: snippets.find(s => s.id === el.snippet?.id)?.name ?? "Unknown Snippet",
                     }
                     : el}
